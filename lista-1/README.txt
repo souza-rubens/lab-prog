@@ -1,1 +1,1 @@
-Códigos das resolução da lista 1.
+Códigos das resoluções da lista 1.
