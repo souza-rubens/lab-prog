@@ -17,13 +17,14 @@ void mostrar_armarios(unsigned char cod){
     printf("\n");
 }
 int main(){
-    unsigned char cod = 255, mask = 0x01, pos, opcao;
-    
-    printf("%hhu\n", cod);
-    mostrar_armarios(cod);
-
+    unsigned char cod = 0, mask = 0x01, pos, opcao;
     do{
+        puts("---- ARMARIOS ----");
+        printf("cod: %hhu\n", cod);
+        mostrar_armarios(cod);
+
         printf("MENU:\n 1 - Ocupar Armario\n2 - Liberar armario\n3 - Sair\n");
+        puts("Digite sua escolha: ");
         scanf("%hhu", &opcao);
         switch(opcao){
             case 1:
@@ -39,16 +40,12 @@ int main(){
                 } while(codTemp == cod);
                 printf("Posicao livre escolhida: %hhu\n", pos);
                 cod = codTemp;
-                printf("%hhu\n", cod);
-                mostrar_armarios(cod);
                 break;
             case 2:
                 puts("TESTE OPCAO 2");
                 printf("Digite a posicao da cadeira:\n");
                 scanf("%hhu", &pos);
                 cod = cod & ~(mask << pos-1);
-                printf("%hhu\n", cod);
-                mostrar_armarios(cod);
                 break;
             case 3:
                 puts("Programa encerrado pelo usuario");
@@ -58,8 +55,6 @@ int main(){
         }
 
     } while(opcao != 3);
-    printf("%hhu\n", cod);
-    mostrar_armarios(cod);
     
     return 0;
 }
