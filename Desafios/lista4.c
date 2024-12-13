@@ -2,78 +2,80 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define N 10
-#define M 20
+#define N 3
+#define M 3
 #define MAX 256
+#define BITS 8
+
+void preencher_matriz(unsigned char *matriz, int LIN, int COL);
+void imprimir_matriz(unsigned char *matriz, int LIN, int COL);
+void gerar_lbp(unsigned char *matrizOriginal, unsigned char *matrizLBP, int LIN, int COL);
+
 int main(){
     unsigned char imagemEntrada[N][M];
     srand(time(NULL));
     
-    //Preencher matriz
-    for(int i=0; i<N; i++){
-        for(int j=0; j<M; j++)
-            imagemEntrada[i][j] = rand() % MAX;
-    }
-    unsigned char imagemLBP[N][M], numLBP;
-    for(int i=0; i<N; i++){
-        for(int j=0; j<M; j++){
-            numLBP = 0;
-            if(j-1 >= 0)
-                if(imagemEntrada[i][j-1] >= imagemEntrada[i][j])
-                    numLBP++;
-            numLBP = numLBP << 1;
-            
-            if(i+1 < N && j-1 >= 0)
-                if(imagemEntrada[i+1][j-1] >= imagemEntrada[i][j])
-                    numLBP++;
-            numLBP = numLBP << 1;
-            
-            if(i+1 < N)
-                if(imagemEntrada[i+1][j] >= imagemEntrada[i][j])
-                    numLBP++;
-            numLBP = numLBP << 1;
-            
-            if(i+1 < N && j+1 < M)
-                if(imagemEntrada[i+1][j+1] >= imagemEntrada[i][j])
-                    numLBP++;
-            numLBP = numLBP << 1;
-            
-            if(j+1 < M)
-                if(imagemEntrada[i][j+1] >= imagemEntrada[i][j])
-                    numLBP++;
-            numLBP = numLBP << 1;
 
-            if(i-1 >= 0 && j+1 < M)
-                if(imagemEntrada[i-1][j+1] >= imagemEntrada[i][j])
-                    numLBP++;
-            numLBP = numLBP << 1;
+    preencher_matriz(&imagemEntrada[0][0], N, M);
+    puts("--- IMAGEM ORIGINAL ---");
+    imprimir_matriz(&imagemEntrada[0][0], N, M);
+    
+    unsigned char imagemLBP[N][M];
+    gerar_lbp(&imagemEntrada[0][0], &imagemLBP[0][0], N, M);
 
-            if(i-1 >= 0)
-                if(imagemEntrada[i-1][j] >= imagemEntrada[i][j])
-                    numLBP++;
-            numLBP = numLBP << 1;
-            if(i-1 >= 0 && j-1 >= 0)
-                if(imagemEntrada[i-1][j-1] >= imagemEntrada[i][j])
-                    numLBP++;
-            
-            imagemLBP[i][j] = numLBP;
-        }
-    }
-       
-    puts("---IMAGEM ORIGINAL---");
-    for(int i=0; i<N; i++){
-        for(int j=0; j<M; j++){
-            printf("%3hhu  ", imagemEntrada[i][j]);
-        }
-        printf("\n");
+    puts("--- IMAGEM LBP ---");
+    imprimir_matriz(&imagemLBP[0][0], N, M);
+
+
+    return 0;
+}
+
+void preencher_matriz(unsigned char *matriz, int LIN, int COL){
+    for(int i=0; i<LIN*COL; i++)
+            *(matriz + i) = rand() % MAX;
+}
+
+void imprimir_matriz(unsigned char *matriz, int LIN, int COL){
+    for(int i=0; i<LIN*COL; i++){
+        printf("%3hhu  ", *(matriz + i));
+        if(!((i+1)%COL)) printf("\n");
     }
     printf("\n");
-    puts("---IMAGEM LBP---");
-    for(int i=0; i<N; i++){
-        for(int j=0; j<M; j++){
-            printf("%3hhu  ", imagemLBP[i][j]);
+}
+
+void gerar_lbp(unsigned char *matrizOriginal, unsigned char *matrizLBP, int LIN, int COL){
+    
+    //Matriz com o número de deslocamentos necessários para a máscara
+    unsigned char matrizTemp[BITS] = {0, 1, 2, 7, 3, 6, 5, 4};
+    
+    for(int i=0; i<LIN; i++){
+        for(int j=0; j<COL; j++){
+            unsigned char mask = 0x0;
+            unsigned char cont = 0;
+            
+            //Laços para pegar os números na vizinhança
+            for(int k=i-1; k<=i+1;k++){
+                for(int l=j-1; l<=j+1; l++){
+                    
+                    //Ignorar se o número vizinho estiver fora da matriz
+                    if((k<0 || k==LIN) || (l<0 || l==COL)){
+                        cont++;
+                        continue;
+                    } 
+                    //Verificação para ignorar o número central
+                    if(k == i && l==j) continue;
+
+                    //Operação para gerar o número LBP
+                    if(*(matrizOriginal + (COL*k) + l ) >= *(matrizOriginal + (COL*i) + j )){
+                        
+                        mask = mask + (1 << matrizTemp[cont]);
+                    }
+                    cont++;
+                }
+            }
+            
+            *(matrizLBP + (COL*i) + j) = mask;
         }
-        printf("\n");
     }
-    return 0;
+
 }
