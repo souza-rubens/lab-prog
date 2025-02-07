@@ -1,8 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <dirent.h>
+#include <string.h>
 
-#define K 5
+#define K 10
+
+// Diretórios das imagens
+#define DIR_ORIG "./images/"
+#define DIR_DEST "./cluster-images/"
 
 // Distancia mínima dos centroides iniciais
 #define DIST_MIN 4
@@ -33,6 +39,7 @@ void orgHistograma(unsigned char *, unsigned int *, int);
 unsigned distanciaMinima(unsigned, unsigned char *, int);
 void simplificacao(unsigned char *, unsigned char *, int, unsigned char *);
 void ordVetAscend(unsigned char *, int);
+unsigned contarCaracteres(char *p);
 
 int main(int argc, char *argv[]){
 
@@ -41,100 +48,116 @@ int main(int argc, char *argv[]){
 	// Variável para o cálculo do tempo de execução
 	clock_t time = clock();
 
-	if (argc!=3){
-		printf("Formato: \n\t %s <imagemEntrada.pgm> <imagemSaida.pgm>\n",argv[0]);
-		exit(1);
-	}
+    DIR *d;
+    struct dirent *dir;
+    d = opendir(DIR_ORIG);
+    int contImg = 0;
+    if(d){   
+        while((dir = readdir(d)) != NULL){
+            if(contarCaracteres(dir->d_name) < 3) continue;
+            contImg++;
+            printf("----------------\n");
+            printf("%s\n", dir->d_name);
 
-	readPGMImage(&img,argv[1]);
-	//viewPGMImage(&img);
+            char path[100] = DIR_ORIG;
+            strcat(path, dir->d_name);
 
-	int tamVet = img.c*img.r;
+            readPGMImage(&img, path);
+            //viewPGMImage(&img);
 
-	unsigned qtdCores = contarCoresDistintas(img.pData, tamVet);
-	
-	// Gerar vetor das cores distintas
-	unsigned char *pCoresDistintas = NULL;
-	if(!(pCoresDistintas = gerarVetor(qtdCores))){
-		printf("Não há memória suficiente\n\n");
-		exit(1);
-	}
-	preencherCoresDistintas(img.pData, tamVet, pCoresDistintas);
-	
-	// Vetor da quantidade de cada cor da imagem
-	unsigned *pContCores = NULL;
-	if(!(pContCores = gerarVetorU(qtdCores))){
-		printf("Não há memória suficiente\n\n");
-		exit(1);
-	}
+            int tamVet = img.c*img.r;
 
-	// Preenche vetor da quantidade das cores e organiza pelas mais frequentes
-	preencherVetorQtd(img.pData, tamVet, pCoresDistintas, qtdCores, pContCores);
-	orgHistograma(pCoresDistintas, pContCores, qtdCores);
+            unsigned qtdCores = contarCoresDistintas(img.pData, tamVet);
+            
+            // Gerar vetor das cores distintas
+            unsigned char *pCoresDistintas = NULL;
+            if(!(pCoresDistintas = gerarVetor(qtdCores))){
+                printf("Não há memória suficiente\n\n");
+                exit(1);
+            }
+            preencherCoresDistintas(img.pData, tamVet, pCoresDistintas);
+            
+            // Vetor da quantidade de cada cor da imagem
+            unsigned *pContCores = NULL;
+            if(!(pContCores = gerarVetorU(qtdCores))){
+                printf("Não há memória suficiente\n\n");
+                exit(1);
+            }
 
-	// Prints para Debug
-	printf("As 10 cores mais frequentes:\n");
-	for(int i=0; i<10; i++){
-		printf("Cor: %hhu\tQtd: %u\n", *(pCoresDistintas+i), *(pContCores+i));
-	}
-	printf("\n");
-	printf("Tamanho do vetor = %d\n", tamVet);
-	printf("Quantidade de cores distintas: %u\n\n", qtdCores);
-	// ..
+            // Preenche vetor da quantidade das cores e organiza pelas mais frequentes
+            preencherVetorQtd(img.pData, tamVet, pCoresDistintas, qtdCores, pContCores);
+            orgHistograma(pCoresDistintas, pContCores, qtdCores);
 
-	//Vetor da quantidade serviu apenas para organizar o histograma
-	free(pContCores);
+            // Prints para Debug
+            printf("As 10 cores mais frequentes:\n");
+            for(int i=0; i<10; i++){
+                printf("Cor: %hhu\tQtd: %u\n", *(pCoresDistintas+i), *(pContCores+i));
+            }
+            printf("\n");
+            printf("Tamanho do vetor = %d\n", tamVet);
+            printf("Quantidade de cores distintas: %u\n\n", qtdCores);
+            // ..
+
+            //Vetor da quantidade serviu apenas para organizar o histograma
+            free(pContCores);
 
 
-	// Criação dos centroides iniciais
-	unsigned char *centroides = NULL;
-	if(!(centroides = gerarVetor(K))){
-		printf("Não há memória suficiente\n\n");
-		exit(1);
-	}
+            // Criação dos centroides iniciais
+            unsigned char *centroides = NULL;
+            if(!(centroides = gerarVetor(K))){
+                printf("Não há memória suficiente\n\n");
+                exit(1);
+            }
 
-	//Define os centroides iniciais baseados no histograma respeitando a distância mínima
-	gerarCentroideInicial(centroides, K, pCoresDistintas, qtdCores, DIST_MIN);
-	printf("Centroides Iniciais:\n");
-	viewVetor(centroides, K);
-	// ..
+            //Define os centroides iniciais baseados no histograma respeitando a distância mínima
+            gerarCentroideInicial(centroides, K, pCoresDistintas, qtdCores, DIST_MIN);
+            printf("Centroides Iniciais:\n");
+            viewVetor(centroides, K);
+            // ..
 
-	// Só precisa das cores distintas para calcular os primeiros centroides
-	free(pCoresDistintas);
+            // Só precisa das cores distintas para calcular os primeiros centroides
+            free(pCoresDistintas);
 
-	// Vetor da definição dos grupos das cores da imagem
-	unsigned char *grupos = NULL;
-	if(!(grupos = gerarVetor(tamVet))){
-		printf("Não há memória suficiente\n\n");
-		exit(1);
-	}
+            // Vetor da definição dos grupos das cores da imagem
+            unsigned char *grupos = NULL;
+            if(!(grupos = gerarVetor(tamVet))){
+                printf("Não há memória suficiente\n\n");
+                exit(1);
+            }
 
-	// Classificação das cores da imagem em grupos baseados nos centroides
-	calcularGrupo(grupos, img.pData, tamVet, centroides, K);
-	
-	recalcularCentroide(centroides, K, img.pData, grupos, tamVet, DIST_MIN);
-	
-	simplificacao(img.pData, grupos, tamVet, centroides);
+            // Classificação das cores da imagem em grupos baseados nos centroides
+            calcularGrupo(grupos, img.pData, tamVet, centroides, K);
+            
+            recalcularCentroide(centroides, K, img.pData, grupos, tamVet, DIST_MIN);
+            
+            simplificacao(img.pData, grupos, tamVet, centroides);
 
-	// Criar imagem simplificada
-	writePGMImage(&img, argv[2]);
-	
-	
-	// Prints para debug
-	printf("Centroides Finais:\n");
-	viewVetor(centroides, K);
-	// ..
+            // Criar imagem simplificada
+            char nomeArq[100] = DIR_DEST;
+            strcat(nomeArq, "d-");
+            strcat(nomeArq, dir->d_name);
+            writePGMImage(&img, nomeArq);
+            
+            
+            // Prints para debug
+            printf("Centroides Finais:\n");
+            viewVetor(centroides, K);
+            // ..
 
-	// Liberação de Memória
-	free(grupos);
-	free(centroides);
+            // Liberação de Memória
+            free(grupos);
+            free(centroides);
+        }
+        closedir(d);
+    }
+    printf("Quantidade de imagens: %d\n", contImg);
 
-	time = clock() - time;
-	// imprime o tempo na tela
-	// CLOCKS_PER_SEC/1000 para milissegundos. Se quer em segundos, só precisa dividir por CLOCKS_PER_SEC
-	printf("Tempo de execucao: %lf ms\n", ((double)time)/((CLOCKS_PER_SEC/1000)));
+    time = clock() - time;
+    // imprime o tempo na tela
+    // CLOCKS_PER_SEC/1000 para milissegundos. Se quer em segundos, só precisa dividir por CLOCKS_PER_SEC
+    printf("Tempo de execucao: %lf ms\n", ((double)time)/((CLOCKS_PER_SEC)));
 
-	return 0;
+    return 0;
 
 }
 
@@ -335,7 +358,8 @@ void recalcularCentroide(unsigned char *centroides, int k, unsigned char *pCores
 				}
 			}
 			media = media / cont;
-			if(distanciaMinima(media, centroides, k) > distMin){
+            //if(*(centroides+i) != media){
+			if(distanciaMinima(media, centroides, k) > 1){
 				IsNovo = 1;
 				*(centroides+i) = media;
 			}
@@ -390,4 +414,11 @@ void ordVetAscend(unsigned char *p, int tam){
         }
 
     }
+}
+
+unsigned contarCaracteres(char *p){
+    unsigned cont = 0;
+    while(*(p+cont) != '\0')
+        cont++;
+    return cont;
 }
